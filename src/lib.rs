@@ -76,6 +76,36 @@ const FR_MODULUS_BYTES: [u8; 32] = [
     103, 6, 169, 175, 51, 101, 234, 180, 125, 14,
 ];
 
+#[cfg(feature = "stats")]
+use core::sync::atomic::AtomicUsize;
+#[cfg(feature = "stats")]
+use core::sync::atomic::Ordering::Relaxed;
+
+#[cfg(feature = "stats")]
+lazy_static! {
+    static ref AFFINE_MULS: AtomicUsize = AtomicUsize::new(0);
+    static ref EXTENDED_MULS: AtomicUsize = AtomicUsize::new(0);
+}
+
+/// Statistics on the operations performed by this crate. Returned by [`stats()`].
+#[cfg(feature = "stats")]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct Stats {
+    /// Number of affine point multiplications performed so far.
+    pub affine_muls: usize,
+    /// Number of extended point multiplications performed so far.
+    pub extended_muls: usize,
+}
+
+/// Return statistics on the operations performed by this crate so far.
+#[cfg(feature = "stats")]
+pub fn stats() -> Stats {
+    Stats {
+        affine_muls: AFFINE_MULS.load(Relaxed),
+        extended_muls: EXTENDED_MULS.load(Relaxed),
+    }
+}
+
 /// This represents a Jubjub point in the affine `(u, v)`
 /// coordinates.
 #[derive(Clone, Copy, Debug, Eq)]
@@ -271,6 +301,9 @@ impl AffineNielsPoint {
 
     #[inline]
     fn multiply(&self, by: &[u8; 32]) -> ExtendedPoint {
+        #[cfg(feature = "stats")]
+        AFFINE_MULS.fetch_add(1, Relaxed);
+
         let zero = AffineNielsPoint::identity();
 
         let mut acc = ExtendedPoint::identity();
@@ -356,6 +389,9 @@ impl ExtendedNielsPoint {
 
     #[inline]
     fn multiply(&self, by: &[u8; 32]) -> ExtendedPoint {
+        #[cfg(feature = "stats")]
+        EXTENDED_MULS.fetch_add(1, Relaxed);
+
         let zero = ExtendedNielsPoint::identity();
 
         let mut acc = ExtendedPoint::identity();

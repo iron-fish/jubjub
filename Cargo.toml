@@ -54,6 +54,7 @@ default-features = false
 default = ["alloc", "bits"]
 alloc = ["ff/alloc", "group/alloc"]
 bits = ["ff/bits"]
+stats = []
 
 [[bench]]
 name = "fq_bench"
