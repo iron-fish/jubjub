@@ -956,12 +956,12 @@ fn test_from_bytes_wide_negative_one() {
 #[test]
 fn test_from_bytes_wide_maximum() {
     assert_eq!(
-        Fr([
+        Fr(blst::blst_fr { l: [
             0x8b75_c901_5ae4_2a22,
             0xe590_82e7_bf9e_38b8,
             0x6440_c912_61da_51b3,
             0x0a5e_07ff_b209_91cf,
-        ]),
+        ]}),
         Fr::from_bytes_wide(&[0xff; 64])
     );
 }
@@ -975,12 +975,12 @@ fn test_zero() {
 }
 
 #[cfg(test)]
-const LARGEST: Fr = Fr([
+const LARGEST: Fr = Fr(blst::blst_fr { l: [
     0xd097_0e5e_d6f7_2cb6,
     0xa668_2093_ccc8_1082,
     0x0667_3b01_0134_3b00,
     0x0e7d_b4ea_6533_afa9,
-]);
+] });
 
 #[test]
 fn test_addition() {
@@ -989,16 +989,16 @@ fn test_addition() {
 
     assert_eq!(
         tmp,
-        Fr([
+        Fr(blst::blst_fr { l: [
             0xd097_0e5e_d6f7_2cb5,
             0xa668_2093_ccc8_1082,
             0x0667_3b01_0134_3b00,
             0x0e7d_b4ea_6533_afa9
-        ])
+        ]})
     );
 
     let mut tmp = LARGEST;
-    tmp += &Fr([1, 0, 0, 0]);
+    tmp += &Fr(blst::blst_fr { l: [1, 0, 0, 0] });
 
     assert_eq!(tmp, Fr::zero());
 }
@@ -1007,11 +1007,11 @@ fn test_addition() {
 fn test_negation() {
     let tmp = -&LARGEST;
 
-    assert_eq!(tmp, Fr([1, 0, 0, 0]));
+    assert_eq!(tmp, Fr(blst::blst_fr { l: [1, 0, 0, 0]}));
 
     let tmp = -&Fr::zero();
     assert_eq!(tmp, Fr::zero());
-    let tmp = -&Fr([1, 0, 0, 0]);
+    let tmp = -&Fr(blst::blst_fr { l: [1, 0, 0, 0]});
     assert_eq!(tmp, LARGEST);
 }
 
@@ -1136,13 +1136,13 @@ fn test_invert_is_pow() {
 
 #[test]
 fn test_sqrt() {
-    let mut square = Fr([
+    let mut square = Fr(blst::blst_fr { l: [
         // r - 2
         0xd097_0e5e_d6f7_2cb5,
         0xa668_2093_ccc8_1082,
         0x0667_3b01_0134_3b00,
         0x0e7d_b4ea_6533_afa9,
-    ]);
+    ]});
 
     let mut none_count = 0;
 

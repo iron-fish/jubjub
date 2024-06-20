@@ -36,7 +36,6 @@ extern crate alloc;
 extern crate std;
 
 use bitvec::{order::Lsb0, view::AsBits};
-use lazy_static::lazy_static;
 use core::borrow::Borrow;
 use core::fmt;
 use core::iter::Sum;
@@ -47,6 +46,7 @@ use group::{
     prime::PrimeGroup,
     Curve, Group, GroupEncoding,
 };
+use lazy_static::lazy_static;
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
@@ -676,7 +676,7 @@ impl AffinePoint {
         let u2 = self.u.square();
         let v2 = self.v.square();
 
-        v2 - u2 == Fq::one() + EDWARDS_D * u2 * v2
+        v2 - u2 == Fq::one() + *EDWARDS_D * u2 * v2
     }
 }
 
@@ -1466,8 +1466,8 @@ fn test_is_on_curve_var() {
 #[test]
 fn test_d_is_non_quadratic_residue() {
     assert!(bool::from(EDWARDS_D.sqrt().is_none()));
-    assert!(bool::from((-EDWARDS_D).sqrt().is_none()));
-    assert!(bool::from((-EDWARDS_D).invert().unwrap().sqrt().is_none()));
+    assert!(bool::from((-*EDWARDS_D).sqrt().is_none()));
+    assert!(bool::from((-*EDWARDS_D).invert().unwrap().sqrt().is_none()));
 }
 
 #[test]
@@ -1509,18 +1509,18 @@ fn test_extended_niels_point_identity() {
 #[test]
 fn test_assoc() {
     let p = ExtendedPoint::from(AffinePoint {
-        u: Fq::from_raw([
+        u: Fq::from_u64s_le(&[
             0x81c5_71e5_d883_cfb0,
             0x049f_7a68_6f14_7029,
             0xf539_c860_bc3e_a21f,
             0x4284_715b_7ccc_8162,
-        ]),
-        v: Fq::from_raw([
+        ]).unwrap(),
+        v: Fq::from_u64s_le(&[
             0xbf09_6275_684b_b8ca,
             0xc7ba_2458_90af_256d,
             0x5911_9f3e_8638_0eb0,
             0x3793_de18_2f9f_b1d2,
-        ]),
+        ]).unwrap(),
     })
     .mul_by_cofactor();
     assert!(p.is_on_curve_vartime());
@@ -1534,18 +1534,18 @@ fn test_assoc() {
 #[test]
 fn test_batch_normalize() {
     let mut p = ExtendedPoint::from(AffinePoint {
-        u: Fq::from_raw([
+        u: Fq::from_u64s_le(&[
             0x81c5_71e5_d883_cfb0,
             0x049f_7a68_6f14_7029,
             0xf539_c860_bc3e_a21f,
             0x4284_715b_7ccc_8162,
-        ]),
-        v: Fq::from_raw([
+        ]).unwrap(),
+        v: Fq::from_u64s_le(&[
             0xbf09_6275_684b_b8ca,
             0xc7ba_2458_90af_256d,
             0x5911_9f3e_8638_0eb0,
             0x3793_de18_2f9f_b1d2,
-        ]),
+        ]).unwrap(),
     })
     .mul_by_cofactor();
 
@@ -1580,117 +1580,121 @@ fn test_batch_normalize() {
 }
 
 #[cfg(test)]
-const FULL_GENERATOR: AffinePoint = AffinePoint::from_raw_unchecked(
-    Fq::from_raw([
-        0xe4b3_d35d_f1a7_adfe,
-        0xcaf5_5d1b_29bf_81af,
-        0x8b0f_03dd_d60a_8187,
-        0x62ed_cbb8_bf37_87c8,
-    ]),
-    Fq::from_raw([0xb, 0x0, 0x0, 0x0]),
-);
+fn full_generator() -> AffinePoint {
+    AffinePoint::from_raw_unchecked(
+        Fq::from_u64s_le(&[
+            0xe4b3_d35d_f1a7_adfe,
+            0xcaf5_5d1b_29bf_81af,
+            0x8b0f_03dd_d60a_8187,
+            0x62ed_cbb8_bf37_87c8,
+        ]).unwrap(),
+        Fq::from_u64s_le(&[0xb, 0x0, 0x0, 0x0]).unwrap(),
+    )
+}
 
 #[cfg(test)]
-const EIGHT_TORSION: [AffinePoint; 8] = [
-    AffinePoint::from_raw_unchecked(
-        Fq::from_raw([
-            0xd92e_6a79_2720_0d43,
-            0x7aa4_1ac4_3dae_8582,
-            0xeaaa_e086_a166_18d1,
-            0x71d4_df38_ba9e_7973,
-        ]),
-        Fq::from_raw([
-            0xff0d_2068_eff4_96dd,
-            0x9106_ee90_f384_a4a1,
-            0x16a1_3035_ad4d_7266,
-            0x4958_bdb2_1966_982e,
-        ]),
-    ),
-    AffinePoint::from_raw_unchecked(
-        Fq::from_raw([
-            0xfffe_ffff_0000_0001,
-            0x67ba_a400_89fb_5bfe,
-            0xa5e8_0b39_939e_d334,
-            0x73ed_a753_299d_7d47,
-        ]),
-        Fq::from_raw([0x0, 0x0, 0x0, 0x0]),
-    ),
-    AffinePoint::from_raw_unchecked(
-        Fq::from_raw([
-            0xd92e_6a79_2720_0d43,
-            0x7aa4_1ac4_3dae_8582,
-            0xeaaa_e086_a166_18d1,
-            0x71d4_df38_ba9e_7973,
-        ]),
-        Fq::from_raw([
-            0x00f2_df96_100b_6924,
-            0xc2b6_b572_0c79_b75d,
-            0x1c98_a7d2_5c54_659e,
-            0x2a94_e9a1_1036_e51a,
-        ]),
-    ),
-    AffinePoint::from_raw_unchecked(
-        Fq::from_raw([0x0, 0x0, 0x0, 0x0]),
-        Fq::from_raw([
-            0xffff_ffff_0000_0000,
-            0x53bd_a402_fffe_5bfe,
-            0x3339_d808_09a1_d805,
-            0x73ed_a753_299d_7d48,
-        ]),
-    ),
-    AffinePoint::from_raw_unchecked(
-        Fq::from_raw([
-            0x26d1_9585_d8df_f2be,
-            0xd919_893e_c24f_d67c,
-            0x488e_f781_683b_bf33,
-            0x0218_c81a_6eff_03d4,
-        ]),
-        Fq::from_raw([
-            0x00f2_df96_100b_6924,
-            0xc2b6_b572_0c79_b75d,
-            0x1c98_a7d2_5c54_659e,
-            0x2a94_e9a1_1036_e51a,
-        ]),
-    ),
-    AffinePoint::from_raw_unchecked(
-        Fq::from_raw([
-            0x0001_0000_0000_0000,
-            0xec03_0002_7603_0000,
-            0x8d51_ccce_7603_04d0,
-            0x0,
-        ]),
-        Fq::from_raw([0x0, 0x0, 0x0, 0x0]),
-    ),
-    AffinePoint::from_raw_unchecked(
-        Fq::from_raw([
-            0x26d1_9585_d8df_f2be,
-            0xd919_893e_c24f_d67c,
-            0x488e_f781_683b_bf33,
-            0x0218_c81a_6eff_03d4,
-        ]),
-        Fq::from_raw([
-            0xff0d_2068_eff4_96dd,
-            0x9106_ee90_f384_a4a1,
-            0x16a1_3035_ad4d_7266,
-            0x4958_bdb2_1966_982e,
-        ]),
-    ),
-    AffinePoint::from_raw_unchecked(
-        Fq::from_raw([0x0, 0x0, 0x0, 0x0]),
-        Fq::from_raw([0x1, 0x0, 0x0, 0x0]),
-    ),
-];
+fn eight_torsion() -> [AffinePoint; 8] {
+    [
+        AffinePoint::from_raw_unchecked(
+            Fq::from_u64s_le(&[
+                0xd92e_6a79_2720_0d43,
+                0x7aa4_1ac4_3dae_8582,
+                0xeaaa_e086_a166_18d1,
+                0x71d4_df38_ba9e_7973,
+            ]).unwrap(),
+            Fq::from_u64s_le(&[
+                0xff0d_2068_eff4_96dd,
+                0x9106_ee90_f384_a4a1,
+                0x16a1_3035_ad4d_7266,
+                0x4958_bdb2_1966_982e,
+            ]).unwrap(),
+        ),
+        AffinePoint::from_raw_unchecked(
+            Fq::from_u64s_le(&[
+                0xfffe_ffff_0000_0001,
+                0x67ba_a400_89fb_5bfe,
+                0xa5e8_0b39_939e_d334,
+                0x73ed_a753_299d_7d47,
+            ]).unwrap(),
+            Fq::from_u64s_le(&[0x0, 0x0, 0x0, 0x0]).unwrap(),
+        ),
+        AffinePoint::from_raw_unchecked(
+            Fq::from_u64s_le(&[
+                0xd92e_6a79_2720_0d43,
+                0x7aa4_1ac4_3dae_8582,
+                0xeaaa_e086_a166_18d1,
+                0x71d4_df38_ba9e_7973,
+            ]).unwrap(),
+            Fq::from_u64s_le(&[
+                0x00f2_df96_100b_6924,
+                0xc2b6_b572_0c79_b75d,
+                0x1c98_a7d2_5c54_659e,
+                0x2a94_e9a1_1036_e51a,
+            ]).unwrap(),
+        ),
+        AffinePoint::from_raw_unchecked(
+            Fq::from_u64s_le(&[0x0, 0x0, 0x0, 0x0]).unwrap(),
+            Fq::from_u64s_le(&[
+                0xffff_ffff_0000_0000,
+                0x53bd_a402_fffe_5bfe,
+                0x3339_d808_09a1_d805,
+                0x73ed_a753_299d_7d48,
+            ]).unwrap(),
+        ),
+        AffinePoint::from_raw_unchecked(
+            Fq::from_u64s_le(&[
+                0x26d1_9585_d8df_f2be,
+                0xd919_893e_c24f_d67c,
+                0x488e_f781_683b_bf33,
+                0x0218_c81a_6eff_03d4,
+            ]).unwrap(),
+            Fq::from_u64s_le(&[
+                0x00f2_df96_100b_6924,
+                0xc2b6_b572_0c79_b75d,
+                0x1c98_a7d2_5c54_659e,
+                0x2a94_e9a1_1036_e51a,
+            ]).unwrap(),
+        ),
+        AffinePoint::from_raw_unchecked(
+            Fq::from_u64s_le(&[
+                0x0001_0000_0000_0000,
+                0xec03_0002_7603_0000,
+                0x8d51_ccce_7603_04d0,
+                0x0,
+            ]).unwrap(),
+            Fq::from_u64s_le(&[0x0, 0x0, 0x0, 0x0]).unwrap(),
+        ),
+        AffinePoint::from_raw_unchecked(
+            Fq::from_u64s_le(&[
+                0x26d1_9585_d8df_f2be,
+                0xd919_893e_c24f_d67c,
+                0x488e_f781_683b_bf33,
+                0x0218_c81a_6eff_03d4,
+            ]).unwrap(),
+            Fq::from_u64s_le(&[
+                0xff0d_2068_eff4_96dd,
+                0x9106_ee90_f384_a4a1,
+                0x16a1_3035_ad4d_7266,
+                0x4958_bdb2_1966_982e,
+            ]).unwrap(),
+        ),
+        AffinePoint::from_raw_unchecked(
+            Fq::from_u64s_le(&[0x0, 0x0, 0x0, 0x0]).unwrap(),
+            Fq::from_u64s_le(&[0x1, 0x0, 0x0, 0x0]).unwrap(),
+        ),
+    ]
+}
 
 #[test]
 fn find_eight_torsion() {
-    let g = ExtendedPoint::from(FULL_GENERATOR);
+    let g = ExtendedPoint::from(full_generator());
     assert!(!bool::from(g.is_small_order()));
     let g = g.multiply(&FR_MODULUS_BYTES);
     assert!(bool::from(g.is_small_order()));
 
     let mut cur = g;
 
-    for (i, point) in EIGHT_TORSION.iter().enumerate() {
+    for (i, point) in eight_torsion().iter().enumerate() {
         let tmp = AffinePoint::from(cur);
         if &tmp != point {
             panic!("{}th torsion point should be {:?}", i, tmp);
@@ -1719,7 +1723,7 @@ fn find_curve_generator() {
                 let b = b.double();
                 assert!(bool::from(b.is_small_order()));
                 assert!(bool::from(b.is_identity()));
-                assert_eq!(FULL_GENERATOR, a);
+                assert_eq!(full_generator(), a);
                 assert_eq!(AffinePoint::generator(), a);
                 assert!(bool::from(a.mul_by_cofactor().is_torsion_free()));
                 return;
@@ -1734,15 +1738,15 @@ fn find_curve_generator() {
 
 #[test]
 fn test_small_order() {
-    for point in EIGHT_TORSION.iter() {
+    for point in eight_torsion().iter() {
         assert!(bool::from(point.is_small_order()));
     }
 }
 
 #[test]
 fn test_is_identity() {
-    let a = EIGHT_TORSION[0].mul_by_cofactor();
-    let b = EIGHT_TORSION[1].mul_by_cofactor();
+    let a = eight_torsion()[0].mul_by_cofactor();
+    let b = eight_torsion()[1].mul_by_cofactor();
 
     assert_eq!(a.u, b.u);
     assert_eq!(a.v, a.z);
@@ -1753,45 +1757,45 @@ fn test_is_identity() {
     assert!(bool::from(a.is_identity()));
     assert!(bool::from(b.is_identity()));
 
-    for point in EIGHT_TORSION.iter() {
+    for point in eight_torsion().iter() {
         assert!(bool::from(point.mul_by_cofactor().is_identity()));
     }
 }
 
 #[test]
 fn test_mul_consistency() {
-    let a = Fr([
+    let a = Fr(blst::blst_fr { l: [
         0x21e6_1211_d993_4f2e,
         0xa52c_058a_693c_3e07,
         0x9ccb_77bf_b12d_6360,
         0x07df_2470_ec94_398e,
-    ]);
-    let b = Fr([
+    ]});
+    let b = Fr(blst::blst_fr { l: [
         0x0333_6d1c_be19_dbe0,
         0x0153_618f_6156_a536,
         0x2604_c9e1_fc3c_6b15,
         0x04ae_581c_eb02_8720,
-    ]);
-    let c = Fr([
+    ]});
+    let c = Fr(blst::blst_fr { l: [
         0xd7ab_f5bb_2468_3f4c,
         0x9d77_12cc_274b_7c03,
         0x9732_93db_9683_789f,
         0x0b67_7e29_380a_97a7,
-    ]);
+    ]});
     assert_eq!(a * b, c);
     let p = ExtendedPoint::from(AffinePoint {
-        u: Fq::from_raw([
+        u: Fq::from_u64s_le(&[
             0x81c5_71e5_d883_cfb0,
             0x049f_7a68_6f14_7029,
             0xf539_c860_bc3e_a21f,
             0x4284_715b_7ccc_8162,
-        ]),
-        v: Fq::from_raw([
+        ]).unwrap(),
+        v: Fq::from_u64s_le(&[
             0xbf09_6275_684b_b8ca,
             0xc7ba_2458_90af_256d,
             0x5911_9f3e_8638_0eb0,
             0x3793_de18_2f9f_b1d2,
-        ]),
+        ]).unwrap(),
     })
     .mul_by_cofactor();
     assert_eq!(p * c, (p * a) * b);
@@ -1810,7 +1814,7 @@ fn test_mul_consistency() {
 
 #[test]
 fn test_serialization_consistency() {
-    let gen = FULL_GENERATOR.mul_by_cofactor();
+    let gen = full_generator().mul_by_cofactor();
     let mut p = gen;
 
     let v = vec![

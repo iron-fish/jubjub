@@ -1,6 +1,7 @@
 mod common;
 
 use common::{new_rng, MyRandom, NUM_BLACK_BOX_CHECKS};
+use ff::Field;
 use jubjub::*;
 
 #[test]
@@ -8,7 +9,7 @@ fn test_to_and_from_bytes() {
     let mut rng = new_rng();
     for _ in 0..NUM_BLACK_BOX_CHECKS {
         let a = Fq::new_random(&mut rng);
-        assert_eq!(a, Fq::from_bytes(&Fq::to_bytes(&a)).unwrap());
+        assert_eq!(a, Fq::from_bytes_le(&Fq::to_bytes_le(&a)).unwrap());
     }
 }
 
