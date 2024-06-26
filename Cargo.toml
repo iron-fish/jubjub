@@ -46,6 +46,9 @@ default-features = false
 [dev-dependencies]
 criterion = "0.3"
 
+[dev-dependencies.rand]
+version = "0.8"
+
 [dev-dependencies.rand_xorshift]
 version = "0.3"
 default-features = false
@@ -54,6 +57,7 @@ default-features = false
 default = ["alloc", "bits"]
 alloc = ["ff/alloc", "group/alloc"]
 bits = ["ff/bits"]
+multiply-many = ["alloc"]
 stats = []
 
 [[bench]]

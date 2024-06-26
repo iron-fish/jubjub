@@ -85,6 +85,10 @@ use core::sync::atomic::Ordering::Relaxed;
 static AFFINE_MULS: AtomicUsize = AtomicUsize::new(0);
 #[cfg(feature = "stats")]
 static EXTENDED_MULS: AtomicUsize = AtomicUsize::new(0);
+#[cfg(all(feature = "stats", feature = "multiply-many"))]
+static EXTENDED_MUL_MANY_CALLS: AtomicUsize = AtomicUsize::new(0);
+#[cfg(all(feature = "stats", feature = "multiply-many"))]
+static EXTENDED_MUL_MANY_OPERANDS: AtomicUsize = AtomicUsize::new(0);
 
 /// Statistics on the operations performed by this crate. Returned by [`stats()`].
 #[cfg(feature = "stats")]
@@ -94,6 +98,14 @@ pub struct Stats {
     pub affine_muls: usize,
     /// Number of extended point multiplications performed so far.
     pub extended_muls: usize,
+    /// Number of parallel extended point multiplications performed so far (number of calls to
+    /// [`ExtendedPoint::multiply_many()`] performed so far).
+    #[cfg(feature = "multiply-many")]
+    pub extended_mul_many_calls: usize,
+    /// Total number of operarnds passed to the parallel extended point multiplication function so
+    /// far (total number of items passed to [`ExtendedPoint::multiply_many()`] performed so far).
+    #[cfg(feature = "multiply-many")]
+    pub extended_mul_many_operands: usize,
 }
 
 /// Return statistics on the operations performed by this crate so far.
@@ -102,6 +114,10 @@ pub fn stats() -> Stats {
     Stats {
         affine_muls: AFFINE_MULS.load(Relaxed),
         extended_muls: EXTENDED_MULS.load(Relaxed),
+        #[cfg(feature = "multiply-many")]
+        extended_mul_many_calls: EXTENDED_MUL_MANY_CALLS.load(Relaxed),
+        #[cfg(feature = "multiply-many")]
+        extended_mul_many_operands: EXTENDED_MUL_MANY_OPERANDS.load(Relaxed),
     }
 }
 
@@ -870,6 +886,63 @@ impl ExtendedPoint {
     #[inline]
     fn multiply(self, by: &[u8; 32]) -> Self {
         self.to_niels().multiply(by)
+    }
+
+    /// Multiplies this point by multiple byte arrays in parallel. This is equivalent to calling
+    /// [`multiply`] repeatedly, except that this method is more efficient.
+    ///
+    /// A single call to `multiply` performs exactly 252 point doublings and 252 point additions.
+    /// If the cost of a doubling is `D` and the cost of an addition is `A`, then the cost of a
+    /// single call to `multiply` is:
+    ///
+    /// ```text
+    /// m = 252 * D + 252 * A
+    ///   = 252 * (D + A)
+    /// ```
+    ///
+    /// A call to `multiply_many` with N arrays performs exactly 252 point doublings, and 252 * N
+    /// additions, therefore its cost is:
+    ///
+    /// ```text
+    /// M(N) = 252 * D + 252 * N * A
+    ///      = 252 * (D + N * A)
+    /// ```
+    ///
+    /// Compared to calling `multiply` multiple times:
+    ///
+    /// ```text
+    /// M(N) / (N * m) = (252 * (D + N * A)) / (252 * N * (D + A))
+    ///                = (D + N * A) / (N * (D + A))
+    ///                = (D / N + A) / (D + A)
+    /// ```
+    ///
+    /// Assuming that the cost of a doubling is about the same as the cost of an addition (which is
+    /// not fully true, but may be a valid approximation), then, using the formula above, we get
+    /// that the speed up of using `multiply_many` compared to using `multiply` ranges between 1x
+    /// and 2x.
+    #[cfg(feature = "multiply-many")]
+    pub fn multiply_many(&self, by: &[[u8; 32]]) -> Vec<ExtendedPoint> {
+        #[cfg(feature = "stats")]
+        EXTENDED_MUL_MANY_CALLS.fetch_add(1, Relaxed);
+        #[cfg(feature = "stats")]
+        EXTENDED_MUL_MANY_OPERANDS.fetch_add(by.len(), Relaxed);
+
+        let mut base = *self;
+        let zero = ExtendedNielsPoint::identity();
+        let mut accs = alloc::vec![ExtendedPoint::identity(); by.len()];
+
+        for bit_index in 0..32 * 8 - 4 {
+            let niels_base = base.to_niels();
+
+            for (array, acc) in by.iter().zip(accs.iter_mut()) {
+                let bit = Choice::from((array[bit_index >> 3] >> (bit_index & 0x7)) & 0b1);
+                *acc += ExtendedNielsPoint::conditional_select(&zero, &niels_base, bit);
+            }
+
+            base = base.double();
+        }
+
+        accs
     }
 
     /// Converts a batch of projective elements into affine elements.
@@ -1845,6 +1918,19 @@ fn test_mul_consistency() {
     assert_eq!(p * c, (p_affine_niels * a) * b);
     assert_eq!(p_affine_niels * c, (p * a) * b);
     assert_eq!(p_affine_niels * c, (p_affine_niels * a) * b);
+}
+
+#[test]
+#[cfg(feature = "multiply-many")]
+fn test_mul_many() {
+    let mut rng = rand::thread_rng();
+    let p = ExtendedPoint::random(&mut rng);
+    let inputs = (0..256).map(move |_| rand::random::<[u8; 32]>()).collect::<Vec<_>>();
+
+    let results_from_multiply = inputs.iter().map(|bits| p.multiply(bits)).collect::<Vec<_>>();
+    let results_from_multiply_many = p.multiply_many(&inputs);
+
+    assert_eq!(results_from_multiply, results_from_multiply_many);
 }
 
 #[test]
