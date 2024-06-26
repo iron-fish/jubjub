@@ -82,10 +82,9 @@ use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::Relaxed;
 
 #[cfg(feature = "stats")]
-lazy_static! {
-    static ref AFFINE_MULS: AtomicUsize = AtomicUsize::new(0);
-    static ref EXTENDED_MULS: AtomicUsize = AtomicUsize::new(0);
-}
+static AFFINE_MULS: AtomicUsize = AtomicUsize::new(0);
+#[cfg(feature = "stats")]
+static EXTENDED_MULS: AtomicUsize = AtomicUsize::new(0);
 
 /// Statistics on the operations performed by this crate. Returned by [`stats()`].
 #[cfg(feature = "stats")]
