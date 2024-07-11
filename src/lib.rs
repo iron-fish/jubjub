@@ -1269,6 +1269,11 @@ impl SubgroupPoint {
     pub fn from_raw_unchecked(u: Fq, v: Fq) -> Self {
         SubgroupPoint(AffinePoint::from_raw_unchecked(u, v).to_extended())
     }
+
+    /// Return a reference to the underlaying [`ExtendedPoint`].
+    pub fn as_extended(&self) -> &ExtendedPoint {
+        &self.0
+    }
 }
 
 impl<T> Sum<T> for SubgroupPoint
