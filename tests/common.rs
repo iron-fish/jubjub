@@ -1,5 +1,5 @@
 use ff::Field;
-use jubjub::*;
+use ironfish_jubjub::*;
 use rand_core::{RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 

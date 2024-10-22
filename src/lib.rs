@@ -1,20 +1,4 @@
-//! This crate provides an implementation of the **Jubjub** elliptic curve and its associated
-//! field arithmetic. See [`README.md`](https://github.com/zkcrypto/jubjub/blob/master/README.md) for more details about Jubjub.
-//!
-//! # API
-//!
-//! * `AffinePoint` / `ExtendedPoint` which are implementations of Jubjub group arithmetic
-//! * `AffineNielsPoint` / `ExtendedNielsPoint` which are pre-processed Jubjub points
-//! * `Fq`, which is the base field of Jubjub
-//! * `Fr`, which is the scalar field of Jubjub
-//! * `batch_normalize` for converting many `ExtendedPoint`s into `AffinePoint`s efficiently.
-//!
-//! # Constant Time
-//!
-//! All operations are constant time unless explicitly noted; these functions will contain
-//! "vartime" in their name and they will be documented as variable time.
-//!
-//! This crate uses the `subtle` crate to perform constant-time operations.
+#![doc = include_str!("../README.md")]
 
 #![no_std]
 // Catch documentation errors caused by code changes.

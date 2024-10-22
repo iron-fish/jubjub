@@ -5,12 +5,10 @@ authors = [
     "Jack Grigg <thestr4d@gmail.com>",
 ]
 description = "Implementation of the Jubjub elliptic curve group"
-documentation = "https://docs.rs/jubjub/"
-homepage = "https://github.com/zkcrypto/jubjub"
 license = "MIT/Apache-2.0"
-name = "jubjub"
-repository = "https://github.com/zkcrypto/jubjub"
-version = "0.9.0"
+name = "ironfish-jubjub"
+repository = "https://github.com/iron-fish/jubjub"
+version = "0.1.0"
 edition = "2021"
 
 [dependencies.lazy_static]

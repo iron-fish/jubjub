@@ -2,7 +2,7 @@ mod common;
 
 use common::{new_rng, MyRandom, NUM_BLACK_BOX_CHECKS};
 use ff::Field;
-use jubjub::*;
+use ironfish_jubjub::*;
 
 #[test]
 fn test_to_and_from_bytes() {
